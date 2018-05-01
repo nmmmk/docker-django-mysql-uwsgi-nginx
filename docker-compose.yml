@@ -1,0 +1,42 @@
+version: '3.4'
+
+volumes:
+  mysite.db.volume:
+    name: mysite.db.volume
+
+services:
+  nginx:
+    image: nginx:1.13
+    container_name: mysite.nginx
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/uwsgi_params:/etc/nginx/uwsgi_params
+      - ./static:/static
+    depends_on:
+      - web
+
+  db:
+    image: mysql:5.7
+    container_name: mysite.db
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: mysitepass
+      TZ: 'Asia/Tokyo'
+    volumes:
+      - mysite.db.volume:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+
+  web:
+    build: ./web
+    container_name: mysite.web
+    command: uwsgi --socket :8001 --module mysite.wsgi
+    volumes:
+      - ./src:/code
+      - ./static:/static
+    expose:
+      - "8001"
+    depends_on:
+      - db
